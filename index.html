@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Memory Task Experiment</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background:#0b1020; color:#e8eefc; }
+        .hidden { display: none; }
+        input, select, button { padding: 8px; margin: 10px; }
+    </style>
+</head>
+<body>
+<h1>Welcome to Memory Task</h1>
+
+<!-- Participant Form -->
+<div id="formSection">
+    <h2>Enter Your Details</h2>
+    <form id="participantForm">
+        <input type="text" id="name" placeholder="Name" required><br>
+        <input type="number" id="age" placeholder="Age" required><br>
+        <input type="text" id="branch" placeholder="Branch" required><br>
+        <input type="text" id="department" placeholder="Department" required><br>
+        <button type="submit">Start Experiment</button>
+    </form>
+</div>
+
+<!-- Game Frame -->
+<div id="gameSection" class="hidden">
+    <h2 id="gameTitle">Game 1</h2>
+    <iframe id="gameFrame" src="" width="820" height="620"></iframe><br>
+    <button id="nextBtn" class="hidden">Next Game</button>
+</div>
+
+<script>
+    const form = document.getElementById("participantForm");
+    const formSection = document.getElementById("formSection");
+    const gameSection = document.getElementById("gameSection");
+    const gameTitle = document.getElementById("gameTitle");
+    const nextBtn = document.getElementById("nextBtn");
+    window.gameFrame = document.getElementById("gameFrame");
+
+    const games = ["game1.html", "game2.html", "game3.html", "game4.html", "game5.html"];
+
+    let currentGame = 0;
+    window.participantData = {};
+    window.participantId = "";
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        participantData = {
+            name: document.getElementById("name").value,
+            age: document.getElementById("age").value,
+            branch: document.getElementById("branch").value,
+            department: document.getElementById("department").value
+        };
+
+        window.saveParticipantInfo();
+
+        formSection.classList.add("hidden");
+        gameSection.classList.remove("hidden");
+        loadGame();
+    });
+
+    function loadGame() {
+        if (currentGame < games.length) {
+            gameTitle.innerText = "Game " + (currentGame + 1);
+            gameFrame.src = games[currentGame];
+            nextBtn.classList.remove("hidden");
+        } else {
+            gameTitle.innerText = "Experiment Completed 🎉";
+            gameFrame.style.display = "none";
+            nextBtn.style.display = "none";
+        }
+    }
+
+    nextBtn.addEventListener("click", () => {
+        currentGame++;
+        loadGame();
+    });
+</script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDfCPb9G9mdW3PlwTBw6n27sw7mDjtqUHs",
+        authDomain: "vrmb-cc18d.firebaseapp.com",
+        projectId: "vrmb-cc18d",
+        storageBucket: "vrmb-cc18d.firebasestorage.app",
+        messagingSenderId: "22907398431",
+        appId: "1:22907398431:web:8a7db828c9540f1a0fe82a",
+        measurementId: "G-TQNXX2576Y",
+        databaseURL: "https://vrmb-cc18d-default-rtdb.firebaseio.com/"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.saveParticipantInfo = function () {
+        window.participantId = window.participantData.name + "_" + Date.now();
+        window.participantData.id = window.participantId;
+
+        return set(ref(db, "participants/" + window.participantId + "/info"), window.participantData);
+    }
+
+    window.saveToFirebase = function (gameName, result) {
+        const gameRef = ref(db, "participants/" + window.participantId + "/" + gameName);
+        return push(gameRef, {
+            ...result,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    // ✅ Listener for all games
+    window.addEventListener("message", (event) => {
+        if (!event.data || !event.data.game || !event.data.result) return;
+
+        console.log("📩 Received result:", event.data);
+
+        window.saveToFirebase(event.data.game, event.data.result)
+            .then(() => {
+                console.log(`✅ Saved ${event.data.game} to Firebase`);
+            })
+            .catch(err => console.error("❌ Save failed:", err));
+    });
+</script>
+</body>
+</html>

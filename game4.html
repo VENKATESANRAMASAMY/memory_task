@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Corsi Block Test — Compact Grid</title>
+    <style>
+        :root{
+            --bg:#0b1020; --panel:#0e1730; --accent:#61dafb; --muted:#9fb0d1; --white:#e8eefc;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--white);display:flex;align-items:center;justify-content:center;min-height:100vh}
+        .container{width:100%;max-width:480px;padding:20px}
+        h1{font-size:20px;margin:0 0 16px;text-align:center}
+        .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+        button{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px 10px;border-radius:10px;color:var(--white);cursor:pointer;font-size:14px}
+        button.primary{background:var(--accent);color:#0b1020;border:none}
+        button:disabled{opacity:0.4;cursor:not-allowed}
+        .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+        .cell{aspect-ratio:1/1;border-radius:10px;background:linear-gradient(180deg, #111425, #0e1730);display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid rgba(255,255,255,0.03);user-select:none;touch-action:manipulation;transition: transform 0.2s}
+        .cell.highlight{transform:scale(1.1);box-shadow:0 6px 20px rgba(97,218,251,0.2);border-color:rgba(97,218,251,0.45);background:linear-gradient(180deg,#123b46,#0f2830)}
+        .status{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:14px}
+        .pill{background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:6px;font-size:13px;border:1px solid rgba(255,255,255,0.03)}
+        @media (max-width:560px){.container{padding:12px}h1{font-size:18px}.cell{font-size:14px}}
+
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000}
+        .modal-content{background:var(--panel);padding:16px;border-radius:12px;max-width:480px;text-align:left}
+        .modal-content h2{margin-top:0;color:var(--accent)}
+        .hidden{display:none}
+        #countdownOverlay{
+            position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;
+            font-size:48px;font-weight:bold;color:var(--accent);z-index:2000;text-align:center;padding:20px;
+        }
+        #countdownOverlay.hidden{display:none;}
+    </style>
+</head>
+<body>
+<!-- Instruction Modal -->
+<div id="instructionModal" class="modal">
+    <div class="modal-content">
+        <h2>Instructions</h2>
+        <p>Welcome to the <b>Corsi Block Test</b>.</p>
+        <ol>
+            <li>You will see <b>blocks light up in a sequence</b> (one after another).</li>
+            <li>Your task is to <b>remember the order</b> and then <b>click the blocks in the same order</b>.</li>
+            <li>After selecting all blocks, click <b>Submit Answer</b>.</li>
+            <li>The game starts at <b>Level 1</b> with 3 blocks in the sequence.</li>
+            <li>Each level increases the sequence length by 1 block (up to <b>9</b> — there are only 9 blocks).</li>
+            <li>You have <b>3 chances per level</b>. If you fail all 3, the game ends.</li>
+            <li>Try to reach the highest level possible!</li>
+        </ol>
+
+        <!-- 🖼️ Pictorial representation (SVG inline) -->
+        <div style="text-align:center; margin: 18px 0;">
+            <svg width="180" height="150" viewBox="0 0 220 220">
+                <rect x="10" y="10" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+                <rect x="80" y="10" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+                <rect x="150" y="10" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+
+                <rect x="10" y="80" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+                <rect x="80" y="80" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+                <rect x="150" y="80" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+
+                <rect x="10" y="150" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+                <rect x="80" y="150" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+                <rect x="150" y="150" width="60" height="60" rx="8" fill="#0e1730" stroke="#61dafb" stroke-width="2"/>
+            </svg>
+            <p style="font-size:14px; color:var(--muted); margin-top:8px">Example: 9-block grid layout</p>
+        </div>
+        <button id="startGameBtn" class="primary">Start Game</button>
+    </div>
+</div>
+
+<!-- Results Modal -->
+<div id="resultsModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>Game Over</h2>
+        <p id="resultsSummary">Game Over! Thanks for playing.</p>
+        <div style="margin-top:12px;text-align:right">
+            <button id="closeResults" class="primary">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Countdown Overlay -->
+<div id="countdownOverlay" class="hidden"></div>
+
+<!-- Game Container -->
+<div class="container hidden" id="gameContainer">
+    <h1>Corsi Block Test</h1>
+    <div class="card">
+        <div>
+            <div id="grid" class="grid" aria-label="Corsi grid"></div>
+
+            <div class="status">
+                <div class="pill">Level: <span id="levelNum">1</span></div>
+                <div class="pill">Chances left: <span id="chancesLeft">3</span></div>
+                <div class="pill">Status: <strong id="statusText">Idle</strong></div>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:12px">
+                <button id="submitBtn" class="primary" disabled>Submit Answer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const MAX_BLOCKS = 9;
+    const HIGHLIGHT_MS = 900;
+    const GAP_MS = 400;
+
+    const instructionModal=document.getElementById('instructionModal');
+    const startGameBtn=document.getElementById('startGameBtn');
+    const gameContainer=document.getElementById('gameContainer');
+    const resultsModal=document.getElementById('resultsModal');
+    const resultsSummary=document.getElementById('resultsSummary');
+    const closeResults=document.getElementById('closeResults');
+    const countdownOverlay=document.getElementById('countdownOverlay');
+    const submitBtn=document.getElementById('submitBtn');
+    const gridEl=document.getElementById('grid');
+    const statusText=document.getElementById('statusText');
+    const levelNumEl=document.getElementById('levelNum');
+    const chancesLeftEl=document.getElementById('chancesLeft');
+
+    let cells=[],sequence=[],userAnswer=[],inPlayback=false,inInputPhase=false;
+    let level=1,chances=3,maxLevel=0,results=[],span=3;
+    let globalTrial=0,attemptInLevel=0;
+
+    // Create grid cells
+    for(let i=0;i<MAX_BLOCKS;i++){
+        const cell=document.createElement('div');
+        cell.className='cell';
+        cell.dataset.index=i;
+        cell.tabIndex=0;
+        cell.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:4px">${i+1}</div>`;
+        cell.addEventListener('click',onCellClick);
+        gridEl.appendChild(cell);
+        cells.push(cell);
+    }
+
+    startGameBtn.addEventListener('click',()=>{
+        instructionModal.classList.add('hidden');
+        gameContainer.classList.remove('hidden');
+        startTest();
+    });
+
+    closeResults.addEventListener('click',()=>resultsModal.classList.add('hidden'));
+
+    function setStatus(s){statusText.textContent=s;}
+    function updateUI(){levelNumEl.textContent=level;chancesLeftEl.textContent=chances;}
+
+    function startTest(){resetForNewTest();startLevel();}
+    function resetForNewTest(){sequence=[];userAnswer=[];level=1;chances=3;results=[];maxLevel=0;globalTrial=0;attemptInLevel=0;updateUI();setStatus('Idle');}
+
+    function showMessageAndCountdown(message,callback){
+        countdownOverlay.classList.remove('hidden');
+        countdownOverlay.textContent=message;
+        setTimeout(()=>{
+            const steps=["Get Ready","Go"];
+            let i=0;
+            countdownOverlay.textContent=steps[i];
+            let interval=setInterval(()=>{
+                i++;
+                if(i>=steps.length){
+                    clearInterval(interval);
+                    countdownOverlay.classList.add('hidden');
+                    callback();
+                } else countdownOverlay.textContent=steps[i];
+            },900);
+        },600);
+    }
+
+    function startLevel(){
+        span=Math.min(MAX_BLOCKS,level+2);
+        sequence=generateSequence(span);
+        userAnswer=[];
+        inPlayback=true;
+        inInputPhase=false;
+        submitBtn.disabled=true;
+        attemptInLevel=1;
+        globalTrial++;
+        showMessageAndCountdown(`Level ${level}`,()=>{
+            setStatus('Playing sequence');
+            playSequence(sequence).then(()=>{
+                inPlayback=false;
+                inInputPhase=true;
+                setStatus('Your turn');
+            });
+        });
+        updateUI();
+    }
+
+    function retryChance(){
+        span=Math.min(MAX_BLOCKS,level+2);
+        sequence=generateSequence(span);
+        userAnswer=[];
+        inPlayback=true;
+        inInputPhase=false;
+        submitBtn.disabled=true;
+        attemptInLevel+=1;
+        globalTrial++;
+        showMessageAndCountdown(`Level ${level} — Attempt ${attemptInLevel}`,()=>{
+            setStatus('Playing sequence');
+            playSequence(sequence).then(()=>{
+                inPlayback=false;
+                inInputPhase=true;
+                setStatus('Your turn');
+            });
+        });
+        updateUI();
+    }
+
+    function generateSequence(len){
+        const pool=Array.from({length:MAX_BLOCKS},(_,i)=>i);
+        const seq=[];
+        for(let i=0;i<len;i++){
+            const j=Math.floor(Math.random()*pool.length);
+            seq.push(pool.splice(j,1)[0]);
+        }
+        return seq;
+    }
+
+    function playSequence(seq){
+        return new Promise(resolve=>{
+            let i=0;
+            const playNext=()=>{
+                if(i>=seq.length){resolve(); return;}
+                highlight(seq[i]);
+                setTimeout(()=>{unhighlight(seq[i]); i++; setTimeout(playNext,GAP_MS);},HIGHLIGHT_MS);
+            };
+            playNext();
+        });
+    }
+
+    function highlight(idx){cells[idx].classList.add('highlight');}
+    function unhighlight(idx){cells[idx].classList.remove('highlight');}
+
+    function onCellClick(e){
+        if(!inInputPhase) return;
+        const idx=Number(e.currentTarget.dataset.index);
+        highlight(idx);
+        setTimeout(()=>unhighlight(idx),300);
+        if(userAnswer.length<span) userAnswer.push(idx);
+        submitBtn.disabled=(userAnswer.length!==span);
+    }
+
+    submitBtn.addEventListener('click',()=>{
+        if(!inInputPhase) return;
+        inInputPhase=false;
+        submitBtn.disabled=true;
+        const correct=checkAnswer();
+        processResult(correct);
+    });
+
+    function checkAnswer(){
+        if(userAnswer.length!==sequence.length) return false;
+        for(let i=0;i<sequence.length;i++){
+            if(sequence[i]!==userAnswer[i]) return false;
+        }
+        return true;
+    }
+
+    function processResult(success){
+        results.push({trial:globalTrial,level:level,attempt:attemptInLevel,success:success,seq:sequence.slice(),answer:userAnswer.slice()});
+        if(success){
+            maxLevel=Math.max(maxLevel,level);
+            setStatus(`Level ${level} completed!`);
+            level++;
+            chances=3;
+            attemptInLevel=0;
+            updateUI();
+            setTimeout(()=>{showMessageAndCountdown(`Next level: ${level}`,startLevel);},900);
+        } else {
+            chances--;
+            if(chances>0){
+                setStatus(`Fail! Chances left: ${chances}`);
+                updateUI();
+                setTimeout(retryChance,900);
+            } else endGame();
+        }
+    }
+
+    function endGame(){
+        setStatus('Game Over');
+
+        const totalTrials = results.length;
+        const correctTrials = results.filter(r => r.success).length;
+
+        // Simple message for participant
+        resultsSummary.textContent = `Game Over! You reached level ${maxLevel}.`;
+
+        resultsModal.classList.remove('hidden');
+
+        // Send full results to parent for Firebase
+        window.parent.postMessage({
+            game: "game4",
+            result: {
+                maxLevel: maxLevel,
+                totalTrials: totalTrials,
+                correctTrials: correctTrials,
+                detailed: results
+            }
+        }, "*");
+    }
+
+    // Init UI
+    (function init(){updateUI();setStatus('Idle');})();
+</script>
+</body>
+</html>
