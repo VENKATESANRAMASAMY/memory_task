@@ -14,6 +14,7 @@
         #instructions { background:#1e243d; padding:20px; border-radius:12px; box-shadow:0 0 12px #444; margin:20px auto; max-width:600px; }
         #game { display:none; }
         #finalReport { display:none; background:#1e243d; padding:20px; border-radius:12px; box-shadow:0 0 12px #444; margin-top:20px; max-width:600px; margin-left:auto; margin-right:auto; }
+        #answerSection { display:none; margin-top:15px; }
     </style>
 </head>
 <body>
@@ -35,15 +36,19 @@
     <h2 id="levelText">Level: 1</h2>
     <h3 id="chanceText">Chance: 1</h3>
     <div id="digitBox"></div><br>
-    <input type="text" id="userInput" placeholder="Enter digits" />
-    <br>
-    <button onclick="checkAnswer()">Submit</button>
-    <button id="clearBtn" onclick="clearInput()">Clear</button>
+
+    <!-- Answer Section (hidden until digits are done) -->
+    <div id="answerSection">
+        <input type="text" id="userInput" placeholder="Enter digits" />
+        <br>
+        <button onclick="checkAnswer()">Submit</button>
+        <button id="clearBtn" onclick="clearInput()">Clear</button>
+    </div>
+
     <h3 id="status"></h3>
 </div>
 
 <div id="finalReport">
-    <!-- ✅ Only show Game Over -->
     <h2>Game Over </h2>
 </div>
 
@@ -78,7 +83,7 @@
         }, 1000);
     }
 
-    function showSequence(seq) {
+    function showSequence(seq, callback) {
         let digitBox = document.getElementById("digitBox");
         let i = 0;
         digitBox.innerText = "";
@@ -89,6 +94,7 @@
                 setTimeout(() => { digitBox.innerText = ""; }, 600);
             } else {
                 clearInterval(interval);
+                callback(); // ✅ call when finished
             }
         }, 1000);
     }
@@ -100,7 +106,17 @@
         document.getElementById("chanceText").innerText = "Chance: " + chance;
         document.getElementById("status").innerText = "";
         document.getElementById("userInput").value = "";
-        showReady(() => showSequence(sequence));
+
+        // Hide input while showing sequence
+        document.getElementById("answerSection").style.display = "none";
+
+        showReady(() => {
+            showSequence(sequence, () => {
+                // Show input AFTER sequence is shown
+                document.getElementById("answerSection").style.display = "block";
+                document.getElementById("userInput").focus();
+            });
+        });
     }
 
     function checkAnswer() {
@@ -139,9 +155,6 @@
     function endGame() {
         document.getElementById("game").style.display = "none";
         document.getElementById("finalReport").style.display = "block";
-
-        // ✅ Do NOT show summary to participant
-        // ✅ Only send to parent (index.html) for Firebase saving
         window.parent.postMessage({
             game: "game1",
             result: {
@@ -157,6 +170,7 @@
 </script>
 </body>
 </html>
+
 
 
 
