@@ -4,22 +4,98 @@
     <meta charset="UTF-8" />
     <title>Memory Task Experiment</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background:#0b1020; color:#e8eefc; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background:#0b1020;
+            color:#e8eefc;
+        }
         .hidden { display: none; }
-        input, select, button { padding: 8px; margin: 10px; }
+        input, select, button {
+            padding: 8px;
+            margin: 6px;
+            width: 260px;
+        }
+        .radio-group {
+            text-align: left;
+            display: inline-block;
+            margin: 8px 0;
+        }
+        button {
+            cursor: pointer;
+        }
     </style>
 </head>
+
 <body>
 <h1>Welcome to Memory Task</h1>
 
 <!-- Participant Form -->
 <div id="formSection">
-    <h2>Enter Your Details</h2>
+    <h2>Participant Details</h2>
+
     <form id="participantForm">
-        <input type="text" id="name" placeholder="Name" required><br>
+
+        <input type="text" id="name" placeholder="Student Name" required><br>
+        <input type="text" id="registerNumber" placeholder="Register Number" required><br>
         <input type="number" id="age" placeholder="Age" required><br>
-        <input type="text" id="branch" placeholder="Branch" required><br>
+
+        <!-- Gender -->
+        <div class="radio-group">
+            <strong>Gender:</strong><br>
+            <label><input type="radio" name="gender" value="Female" required> Female</label><br>
+            <label><input type="radio" name="gender" value="Male"> Male</label><br>
+            <label><input type="radio" name="gender" value="Prefer not to say"> Prefer not to say</label><br>
+            <label><input type="radio" name="gender" value="Third Gender"> Third Gender</label>
+        </div><br>
+
+        <!-- Course -->
+        <select id="course" required>
+            <option value="">Select Course</option>
+            <option>Medical</option>
+            <option>Engineering</option>
+            <option>Arts and Science</option>
+            <option>Other</option>
+        </select><br>
+
         <input type="text" id="department" placeholder="Department" required><br>
+
+        <!-- Year of Study -->
+        <select id="year" required>
+            <option value="">Year of Study</option>
+            <option>First</option>
+            <option>Second</option>
+            <option>Third</option>
+            <option>Fourth</option>
+            <option>Other</option>
+        </select><br>
+
+        <input type="text" id="faculty" placeholder="Name of the Faculty" required><br>
+
+        <!-- Place -->
+        <div class="radio-group">
+            <strong>Place:</strong><br>
+            <label><input type="radio" name="place" value="Rural" required> Rural</label><br>
+            <label><input type="radio" name="place" value="Urban"> Urban</label><br>
+            <label><input type="radio" name="place" value="Sub-Urban"> Sub-Urban</label>
+        </div><br>
+
+        <!-- Residence -->
+        <select id="residence" required>
+            <option value="">Type of Residence</option>
+            <option>Hostel</option>
+            <option>PG Hostel</option>
+            <option>Day Scholar</option>
+            <option>Rented House / Flat</option>
+        </select><br>
+
+        <!-- Consent -->
+        <div class="radio-group">
+            <strong>Your participation in this study is completely voluntary:</strong><br>
+            <label><input type="radio" name="consent" value="Yes" required> Yes</label><br>
+            <label><input type="radio" name="consent" value="No"> No</label>
+        </div><br>
+
         <button type="submit">Start Experiment</button>
     </form>
 </div>
@@ -40,22 +116,34 @@
     window.gameFrame = document.getElementById("gameFrame");
 
     const games = ["game1.html", "game2.html", "game3.html", "game4.html", "game5.html"];
-
     let currentGame = 0;
     window.participantData = {};
     window.participantId = "";
 
     form.addEventListener("submit", (e) => {
         e.preventDefault();
+
+        const consent = document.querySelector('input[name="consent"]:checked').value;
+        if (consent === "No") {
+            alert("You must agree to participate to continue.");
+            return;
+        }
+
         participantData = {
             name: document.getElementById("name").value,
+            registerNumber: document.getElementById("registerNumber").value,
             age: document.getElementById("age").value,
-            branch: document.getElementById("branch").value,
-            department: document.getElementById("department").value
+            gender: document.querySelector('input[name="gender"]:checked').value,
+            course: document.getElementById("course").value,
+            department: document.getElementById("department").value,
+            year: document.getElementById("year").value,
+            faculty: document.getElementById("faculty").value,
+            place: document.querySelector('input[name="place"]:checked').value,
+            residence: document.getElementById("residence").value,
+            consent: consent
         };
 
         window.saveParticipantInfo();
-
         formSection.classList.add("hidden");
         gameSection.classList.remove("hidden");
         loadGame();
@@ -79,6 +167,7 @@
     });
 </script>
 
+<!-- Firebase -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
@@ -86,45 +175,37 @@
     const firebaseConfig = {
         apiKey: "AIzaSyDfCPb9G9mdW3PlwTBw6n27sw7mDjtqUHs",
         authDomain: "vrmb-cc18d.firebaseapp.com",
+        databaseURL: "https://vrmb-cc18d-default-rtdb.firebaseio.com/",
         projectId: "vrmb-cc18d",
         storageBucket: "vrmb-cc18d.firebasestorage.app",
         messagingSenderId: "22907398431",
-        appId: "1:22907398431:web:8a7db828c9540f1a0fe82a",
-        measurementId: "G-TQNXX2576Y",
-        databaseURL: "https://vrmb-cc18d-default-rtdb.firebaseio.com/"
+        appId: "1:22907398431:web:8a7db828c9540f1a0fe82a"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     window.saveParticipantInfo = function () {
-        window.participantId = window.participantData.name + "_" + Date.now();
-        window.participantData.id = window.participantId;
-
-        return set(ref(db, "participants/" + window.participantId + "/info"), window.participantData);
-    }
+        window.participantId = participantData.registerNumber + "_" + Date.now();
+        participantData.id = window.participantId;
+        return set(ref(db, "participants/" + window.participantId + "/info"), participantData);
+    };
 
     window.saveToFirebase = function (gameName, result) {
-        const gameRef = ref(db, "participants/" + window.participantId + "/" + gameName);
-        return push(gameRef, {
+        return push(ref(db, "participants/" + window.participantId + "/" + gameName), {
             ...result,
             timestamp: new Date().toISOString()
         });
-    }
+    };
 
-    // ✅ Listener for all games
     window.addEventListener("message", (event) => {
-        if (!event.data || !event.data.game || !event.data.result) return;
-
-        console.log("📩 Received result:", event.data);
-
-        window.saveToFirebase(event.data.game, event.data.result)
-            .then(() => {
-                console.log(`✅ Saved ${event.data.game} to Firebase`);
-            })
-            .catch(err => console.error("❌ Save failed:", err));
+        if (!event.data?.game || !event.data?.result) return;
+        window.saveToFirebase(event.data.game, event.data.result);
     });
 </script>
+
 </body>
 </html>
+
+
 
