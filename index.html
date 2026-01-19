@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Memory Task Experiment</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,16 +22,15 @@
             display: inline-block;
             margin: 8px 0;
         }
-        button {
-            cursor: pointer;
-        }
+        button { cursor: pointer; }
     </style>
 </head>
 
 <body>
+
 <h1>Welcome to Memory Task</h1>
 
-<!-- Participant Form -->
+<!-- ================= PARTICIPANT FORM ================= -->
 <div id="formSection">
     <h2>Participant Details</h2>
 
@@ -60,7 +60,7 @@
 
         <input type="text" id="department" placeholder="Department" required><br>
 
-        <!-- Year of Study -->
+        <!-- Year -->
         <select id="year" required>
             <option value="">Year of Study</option>
             <option>First</option>
@@ -70,7 +70,7 @@
             <option>Other</option>
         </select><br>
 
-        <input type="text" id="faculty" placeholder="Name of the Faculty" required><br>
+        <input type="text" id="faculty" placeholder="Faculty Name" required><br>
 
         <!-- Place -->
         <div class="radio-group">
@@ -91,7 +91,7 @@
 
         <!-- Consent -->
         <div class="radio-group">
-            <strong>Your participation in this study is completely voluntary:</strong><br>
+            <strong>Your participation is voluntary:</strong><br>
             <label><input type="radio" name="consent" value="Yes" required> Yes</label><br>
             <label><input type="radio" name="consent" value="No"> No</label>
         </div><br>
@@ -100,23 +100,25 @@
     </form>
 </div>
 
-<!-- Game Frame -->
+<!-- ================= GAME SECTION ================= -->
 <div id="gameSection" class="hidden">
     <h2 id="gameTitle">Game 1</h2>
-    <iframe id="gameFrame" src="" width="820" height="620"></iframe><br>
+    <iframe id="gameFrame" width="820" height="620"></iframe><br>
     <button id="nextBtn" class="hidden">Next Game</button>
 </div>
 
+<!-- ================= MAIN SCRIPT ================= -->
 <script>
     const form = document.getElementById("participantForm");
     const formSection = document.getElementById("formSection");
     const gameSection = document.getElementById("gameSection");
     const gameTitle = document.getElementById("gameTitle");
     const nextBtn = document.getElementById("nextBtn");
-    window.gameFrame = document.getElementById("gameFrame");
+    const gameFrame = document.getElementById("gameFrame");
 
-    const games = ["game1.html", "game2.html", "game3.html", "game4.html", "game5.html"];
+    const games = ["game1.html", "game2.html", "game3.html", "game4.html"];
     let currentGame = 0;
+
     window.participantData = {};
     window.participantId = "";
 
@@ -143,7 +145,8 @@
             consent: consent
         };
 
-        window.saveParticipantInfo();
+        saveParticipantInfo();
+
         formSection.classList.add("hidden");
         gameSection.classList.remove("hidden");
         loadGame();
@@ -167,7 +170,7 @@
     });
 </script>
 
-<!-- Firebase -->
+<!-- ================= FIREBASE ================= -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
@@ -185,17 +188,28 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // 🔑 SAVE USING NAME ONLY (NO NUMBER)
     window.saveParticipantInfo = function () {
-        window.participantId = participantData.registerNumber + "_" + Date.now();
+        window.participantId = participantData.name
+            .trim()
+            .replace(/\s+/g, "_");
+
         participantData.id = window.participantId;
-        return set(ref(db, "participants/" + window.participantId + "/info"), participantData);
+
+        return set(
+            ref(db, "participants/" + window.participantId + "/info"),
+            participantData
+        );
     };
 
     window.saveToFirebase = function (gameName, result) {
-        return push(ref(db, "participants/" + window.participantId + "/" + gameName), {
-            ...result,
-            timestamp: new Date().toISOString()
-        });
+        return push(
+            ref(db, "participants/" + window.participantId + "/" + gameName),
+            {
+                ...result,
+                timestamp: new Date().toISOString()
+            }
+        );
     };
 
     window.addEventListener("message", (event) => {
@@ -206,6 +220,4 @@
 
 </body>
 </html>
-
-
 
